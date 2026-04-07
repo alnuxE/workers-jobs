@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* Configuraciones de scrollbar u otros utilitarios globales opcionales si se desean */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Quitar los custom root para usar los definidos en las clases de tailwind en layout.tsx */
