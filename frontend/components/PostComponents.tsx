@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { HeartIcon, MessageIcon, MapPinIcon, BriefcaseIcon, WorkerIcon } from "./Icons";
+import { useAuth } from "@/context/AuthContext";
 
 export interface Author {
   name: string;
@@ -9,7 +10,7 @@ export interface Author {
 }
 
 export interface PostEntity {
-  id: number;
+  _id: string;
   type: "job" | "worker"; 
   author: Author;
   title: string;
@@ -23,29 +24,146 @@ export interface PostEntity {
 }
 
 
-export function CreatePost() {
+export function CreatePost({ onPostCreated }: { onPostCreated?: () => void }) {
+  const { user } = useAuth();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [type, setType] = useState<"job"|"worker">("job");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [location, setLocation] = useState("");
+  const [budget, setBudget] = useState("");
+  const [tagsInput, setTagsInput] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!title || !description || !location) return;
+    
+    setIsSubmitting(true);
+    try {
+      const tags = tagsInput.split(",").map(t => t.trim()).filter(Boolean);
+      
+      const payload = {
+        type,
+        title,
+        description,
+        location,
+        budget: type === "job" ? budget : undefined,
+        rate: type === "worker" ? budget : undefined,
+        tags,
+        author: {
+          name: user?.name || "Usuario Activo",
+          avatar: user?.avatar || "https://i.pravatar.cc/150?u=99",
+          role: user?.role || (type === "job" ? "Empresario" : "Independiente"),
+          time: "hace un momento"
+        }
+      };
+
+      const res = await fetch("http://localhost:4000/api/posts", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        setTitle("");
+        setDescription("");
+        setLocation("");
+        setBudget("");
+        setTagsInput("");
+        setIsExpanded(false);
+        if (onPostCreated) onPostCreated();
+      }
+    } catch (error) {
+      console.error("Failed to create post:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <div className="bg-white dark:bg-[#26201D] rounded-2xl p-5 border border-[#F0E5D8] dark:border-[#3D332D] shadow-sm">
+    <div className="bg-white dark:bg-[#26201D] rounded-2xl p-5 border border-[#F0E5D8] dark:border-[#3D332D] shadow-sm transition-all duration-300">
       <div className="flex gap-4 mb-4">
-        <img src="https://i.pravatar.cc/150?u=99" alt="User" className="w-10 h-10 rounded-full" />
+        <img src={user?.avatar || "https://i.pravatar.cc/150?u=99"} alt="User" className="w-10 h-10 rounded-full object-cover" />
         <textarea 
-          rows={2} 
-          className="w-full bg-[#FCF8F4] dark:bg-[#1A1614] border border-[#F0E5D8] dark:border-[#3D332D] rounded-xl p-3 text-sm placeholder-[#A39891] text-[#2D231F] dark:text-[#EFEBE8] outline-none focus:border-[#E06A3B] focus:ring-1 focus:ring-[#E06A3B]/50 resize-none transition-all"
-          placeholder="¿Qué estás buscando? (Ej. Busco plomero, ofrezco trabajo en carpintería...)"
+          rows={isExpanded ? 3 : 2}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          onClick={() => setIsExpanded(true)}
+          className="w-full bg-[#FCF8F4] dark:bg-[#1A1614] border border-[#F0E5D8] dark:border-[#3D332D] rounded-xl p-3 text-sm placeholder-[#A39891] text-[#2D231F] dark:text-[#EFEBE8] outline-none focus:border-[#E06A3B] border-opacity-50 focus:border-opacity-100 resize-none transition-all"
+          placeholder="¿Qué estás buscando? (Ej. Busco plomero, ofrezco trabajo...)"
         ></textarea>
       </div>
+
+      {isExpanded && (
+        <div className="sm:pl-14 space-y-3 mb-4 animate-in fade-in duration-300">
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Título breve (ej. Necesito Plomero) *"
+            className="w-full bg-[#FCF8F4] dark:bg-[#1A1614] border border-[#F0E5D8] dark:border-[#3D332D] rounded-lg p-2.5 text-sm outline-none focus:border-[#E06A3B]"
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+             <input
+              type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Ubicación *"
+              className="w-full bg-[#FCF8F4] dark:bg-[#1A1614] border border-[#F0E5D8] dark:border-[#3D332D] rounded-lg p-2.5 text-sm outline-none focus:border-[#E06A3B]"
+            />
+            <input
+              type="text"
+              value={budget}
+              onChange={(e) => setBudget(e.target.value)}
+              placeholder={type === "job" ? "Presupuesto (ej. $1000)" : "Tarifa (ej. $50/hr)"}
+              className="w-full bg-[#FCF8F4] dark:bg-[#1A1614] border border-[#F0E5D8] dark:border-[#3D332D] rounded-lg p-2.5 text-sm outline-none focus:border-[#E06A3B]"
+            />
+          </div>
+          <input
+            type="text"
+            value={tagsInput}
+            onChange={(e) => setTagsInput(e.target.value)}
+            placeholder="Etiquetas separadas por coma (ej. plomería, urgente)"
+            className="w-full bg-[#FCF8F4] dark:bg-[#1A1614] border border-[#F0E5D8] dark:border-[#3D332D] rounded-lg p-2.5 text-sm outline-none focus:border-[#E06A3B]"
+          />
+        </div>
+      )}
+
       <div className="flex justify-between items-center sm:pl-14">
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl text-[#7A6A61] dark:text-[#A39891] hover:bg-[#FCF8F4] dark:hover:bg-[#3D332D]/40 transition-colors">
+          <button 
+            onClick={() => { setIsExpanded(true); setType("job"); }}
+            className={`flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl transition-colors ${type === "job" ? 'bg-[#FCF8F4] dark:bg-[#3D332D]/80 text-[#2D231F] dark:text-white' : 'text-[#7A6A61] dark:text-[#A39891] hover:bg-[#FCF8F4] dark:hover:bg-[#3D332D]/40'}`}
+          >
             <span className="text-[#E06A3B]"><BriefcaseIcon /></span> Propuesta
           </button>
-          <button className="flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl text-[#7A6A61] dark:text-[#A39891] hover:bg-[#FCF8F4] dark:hover:bg-[#3D332D]/40 transition-colors">
+          <button 
+            onClick={() => { setIsExpanded(true); setType("worker"); }}
+            className={`flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl transition-colors ${type === "worker" ? 'bg-[#FCF8F4] dark:bg-[#3D332D]/80 text-[#2D231F] dark:text-white' : 'text-[#7A6A61] dark:text-[#A39891] hover:bg-[#FCF8F4] dark:hover:bg-[#3D332D]/40'}`}
+          >
             <span className="text-amber-500"><WorkerIcon /></span> Promocionarme
           </button>
         </div>
-        <button className="bg-[#E06A3B] hover:bg-[#C65B30] text-white px-5 py-2 rounded-xl text-sm font-bold shadow-md shadow-[#E06A3B]/20 transition-all active:scale-95">
-          Publicar
-        </button>
+        <div className="flex gap-2">
+          {isExpanded && (
+            <button 
+              onClick={() => setIsExpanded(false)}
+              className="px-4 text-xs font-semibold text-[#7A6A61] dark:text-[#A39891] hover:text-[#2D231F] dark:hover:text-[#EFEBE8] transition-colors"
+            >
+              Cancelar
+            </button>
+          )}
+          <button 
+            onClick={handleSubmit}
+            disabled={isSubmitting || !title || !description || !location}
+            className="bg-[#E06A3B] hover:bg-[#C65B30] disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2 rounded-xl text-sm font-bold shadow-md shadow-[#E06A3B]/20 transition-all active:scale-95"
+          >
+            {isSubmitting ? "Publicando..." : "Publicar"}
+          </button>
+        </div>
       </div>
     </div>
   );

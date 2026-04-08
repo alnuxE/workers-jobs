@@ -1,15 +1,19 @@
 import React from "react";
+import { useAuth } from "@/context/AuthContext";
 
 export function Sidebar() {
+  const { user } = useAuth();
+  const handle = user?.email ? `@${user.email.split('@')[0]}` : "@usuario";
+
   return (
     <aside className="sticky top-24 space-y-6">
       {/* Mini Profile */}
       <div className="bg-white dark:bg-[#26201D] rounded-2xl p-5 border border-[#F0E5D8] dark:border-[#3D332D] shadow-sm">
         <div className="flex items-center gap-4 mb-4">
-          <img src="https://i.pravatar.cc/150?u=99" alt="User" className="w-12 h-12 rounded-full" />
+          <img src={user?.avatar || "https://i.pravatar.cc/150?u=99"} alt="User" className="w-12 h-12 rounded-full object-cover" />
           <div>
-            <h3 className="font-bold text-[15px]">Carlos Electricista</h3>
-            <p className="text-xs text-[#7A6A61] dark:text-[#A39891]">@carlos_elec</p>
+            <h3 className="font-bold text-[15px] truncate max-w-[150px]">{user?.name || "Cargando..."}</h3>
+            <p className="text-xs text-[#7A6A61] dark:text-[#A39891] truncate max-w-[150px]">{handle}</p>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4 text-center pb-4 border-b border-[#F0E5D8] dark:border-[#3D332D] mb-4">

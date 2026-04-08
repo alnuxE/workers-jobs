@@ -4,13 +4,22 @@ import React, { useState, useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Sidebar, RightBar } from "@/components/Sidebars";
 import { CreatePost, FeedTabs, PostCard } from "@/components/PostComponents";
-// Importar modelo sólo para los tipos en frontend, aunque en MVC estrictamente se comparte interfaz o se duplica.
-import { PostEntity } from "@/components/PostComponents"; // o donde estén definidos si mudamos todo.
+import { PostEntity } from "@/components/PostComponents";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function App() {
   const [isDark, setIsDark] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const [posts, setPosts] = useState<PostEntity[]>([]);
+  const { user, token, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
 
   // 1. Efecto para manejar el Tema Oscuro/Claro (Modo UI)
   useEffect(() => {
@@ -29,22 +38,32 @@ export default function App() {
     }
   };
 
-  // 2. Efecto para interactuar con el Controlador (Backend API Extremo)
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        const response = await fetch(`http://localhost:4000/api/posts?filter=${activeTab}`);
-        const data = await response.json();
+  // 2. Interacción con el Backend (API)
+  const fetchPosts = async () => {
+    if (!token) return;
+    try {
+      const response = await fetch(`http://localhost:4000/api/posts?filter=${activeTab}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (Array.isArray(data)) {
         setPosts(data);
-      } catch (err) {
-        console.error("Error al conectarse con Backend Express:", err);
       }
-    };
+    } catch (err) {
+      console.error("Error al conectarse con Backend Express:", err);
+    }
+  };
 
+  useEffect(() => {
     fetchPosts();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   // 3. Renderizado de la Vista (View Layer)
+  if (loading || !user) {
+    return <div className="min-h-screen flex items-center justify-center dark:bg-[#1A1614] dark:text-[#EFEBE8]">Cargando plataforma...</div>;
+  }
+
   return (
     <div className="min-h-screen">
       <Navbar toggleTheme={toggleTheme} isDark={isDark} />
@@ -57,14 +76,14 @@ export default function App() {
 
         {/* Sección Central (Feed Principal) */}
         <section className="md:col-span-9 lg:col-span-6 space-y-6">
-          <CreatePost />
+          <CreatePost onPostCreated={fetchPosts} />
           
           <FeedTabs activeTab={activeTab} setActiveTab={setActiveTab} />
           
           {/* Listado de Posts dinámicos del Modelo */}
           <div className="space-y-6">
             {posts.length > 0 ? (
-              posts.map(post => <PostCard key={post.id} post={post} />)
+              posts.map(post => <PostCard key={post._id} post={post} />)
             ) : (
               <p className="text-center text-[#7A6A61] dark:text-[#A39891] pt-10">Cargando publicaciones...</p>
             )}
