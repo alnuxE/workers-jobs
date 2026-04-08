@@ -20,14 +20,16 @@ export function Navbar({ toggleTheme, isDark }: NavbarProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#E06A3B] to-[#C65B30] rounded-xl flex justify-center items-center text-white shadow-sm shadow-[#E06A3B]/40">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
-              </svg>
+          <Link href="/">
+            <div className="flex items-center gap-2 cursor-pointer transition-transform hover:scale-[1.02]">
+              <div className="w-8 h-8 bg-gradient-to-br from-[#E06A3B] to-[#C65B30] rounded-xl flex justify-center items-center text-white shadow-sm shadow-[#E06A3B]/40">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+                </svg>
+              </div>
+              <span className="text-xl font-bold tracking-tight text-[#2D231F] dark:text-[#EFEBE8]">Oficio<span className="text-[#E06A3B]">Red</span></span>
             </div>
-            <span className="text-xl font-bold tracking-tight text-[#2D231F] dark:text-[#EFEBE8]">Oficio<span className="text-[#E06A3B]">Red</span></span>
-          </div>
+          </Link>
 
           {/* Search */}
           <div className="hidden md:flex flex-1 max-w-md mx-8 relative">
@@ -42,7 +44,12 @@ export function Navbar({ toggleTheme, isDark }: NavbarProps) {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Link href="/marketplace">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold text-[#E06A3B] bg-[#E06A3B]/10 hover:bg-[#E06A3B]/20 transition-colors mx-2 cursor-pointer">
+                <span>Tienda</span>
+              </div>
+            </Link>
             <button onClick={toggleTheme} className="p-2 rounded-full text-[#7A6A61] dark:text-[#A39891] hover:bg-[#FDFBFA] dark:hover:bg-[#26201D] transition-colors">
               {isDark ? <SunIcon /> : <MoonIcon />}
             </button>

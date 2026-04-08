@@ -6,6 +6,7 @@ import path from 'path';
 import postRoutes from './routes/postRoutes';
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
+import productRoutes from './routes/productRoutes';
 import { authMiddleware } from './middlewares/authMiddleware';
 
 dotenv.config();
@@ -28,6 +29,7 @@ mongoose.connect(MONGODB_URI)
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/posts', authMiddleware as express.RequestHandler, postRoutes);
+app.use('/api/products', productRoutes);
 
 // Servidor
 app.listen(PORT, () => {

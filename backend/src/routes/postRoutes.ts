@@ -1,12 +1,13 @@
 import { Router } from "express";
-import { getFeedPosts, createPost } from "../controllers/postController";
+import { getFeedPosts, createPost, toggleLike, addComment } from "../controllers/postController";
+import { authMiddleware } from "../middlewares/authMiddleware";
+import express from "express";
 
 const router = Router();
 
-// GET /api/posts?filter=all
 router.get("/", getFeedPosts);
-
-// POST /api/posts
 router.post("/", createPost);
+router.put("/:id/like", authMiddleware as express.RequestHandler, toggleLike);
+router.post("/:id/comment", authMiddleware as express.RequestHandler, addComment);
 
 export default router;

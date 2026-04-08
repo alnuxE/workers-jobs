@@ -19,8 +19,8 @@ export interface PostEntity {
   location: string;
   budget?: string;
   rate?: string;
-  likes: number;
-  comments: number;
+  likedBy: string[];
+  comments: any[];
 }
 
 
@@ -195,21 +195,72 @@ export function FeedTabs({ activeTab, setActiveTab }: { activeTab: string, setAc
 }
 
 export function PostCard({ post }: { post: PostEntity }) {
-  const isJob = post.type === "job";
+  const { user, token } = useAuth();
+  const [localPost, setLocalPost] = useState<PostEntity>(post);
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+  const [newComment, setNewComment] = useState("");
+
+  const likedArray = Array.isArray(localPost.likedBy) ? localPost.likedBy : [];
+  const commentsArray = Array.isArray(localPost.comments) ? localPost.comments : [];
+
+  const isJob = localPost.type === "job";
   const badgeColor = isJob ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" : "bg-[#FDF5F2] text-[#E06A3B] dark:bg-[#E06A3B]/20 dark:text-[#F27A4A]";
   
+  const hasLiked = user ? likedArray.includes(user.id) : false;
+
+  const handleLike = async () => {
+    if (!token) return;
+    try {
+      // Optimistic Update
+      const previousLikedBy = [...likedArray];
+      if (hasLiked) {
+        setLocalPost({ ...localPost, likedBy: likedArray.filter(id => id !== user?.id) });
+      } else {
+        setLocalPost({ ...localPost, likedBy: [...likedArray, user!.id] });
+      }
+
+      const res = await fetch(`http://localhost:4000/api/posts/${localPost._id}/like`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const updatedPost = await res.json();
+        setLocalPost(updatedPost);
+      } else {
+        // Revert on error
+        setLocalPost({ ...localPost, likedBy: previousLikedBy });
+      }
+    } catch (e) {}
+  };
+
+  const handleCommentSubmit = async () => {
+    if (!token || !newComment.trim()) return;
+    try {
+      const res = await fetch(`http://localhost:4000/api/posts/${localPost._id}/comment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ text: newComment })
+      });
+      if (res.ok) {
+        const updatedPost = await res.json();
+        setLocalPost(updatedPost);
+        setNewComment("");
+      }
+    } catch (e) {}
+  };
+
   return (
     <div className="bg-white dark:bg-[#26201D] rounded-2xl p-5 border border-[#F0E5D8] dark:border-[#3D332D] shadow-sm hover:shadow-md transition-shadow">
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <div className="flex gap-3 items-center">
-          <img src={post.author.avatar} alt={post.author.name} className="w-11 h-11 rounded-full object-cover border border-[#F0E5D8] dark:border-[#3D332D]" />
+          <img src={localPost.author.avatar} alt={localPost.author.name} className="w-11 h-11 rounded-full object-cover border border-[#F0E5D8] dark:border-[#3D332D]" />
           <div>
-            <h4 className="font-bold text-[15px] leading-tight">{post.author.name}</h4>
+            <h4 className="font-bold text-[15px] leading-tight">{localPost.author.name}</h4>
             <div className="flex items-center gap-2 text-xs text-[#7A6A61] dark:text-[#A39891]">
-              <span className="font-medium text-[#2D231F] dark:text-[#EFEBE8] opacity-80">{post.author.role}</span>
+              <span className="font-medium text-[#2D231F] dark:text-[#EFEBE8] opacity-80">{localPost.author.role}</span>
               <span>•</span>
-              <span>{post.author.time}</span>
+              <span>{localPost.author.time}</span>
             </div>
           </div>
         </div>
@@ -220,9 +271,9 @@ export function PostCard({ post }: { post: PostEntity }) {
 
       {/* Content */}
       <div className="mb-4">
-        <h3 className="font-bold text-lg mb-2">{post.title}</h3>
+        <h3 className="font-bold text-lg mb-2">{localPost.title}</h3>
         <p className="text-sm text-[#52443C] dark:text-[#B8AEA7] leading-relaxed mb-4">
-          {post.description}
+          {localPost.description}
         </p>
         
         {/* Meta Info */}
@@ -231,7 +282,7 @@ export function PostCard({ post }: { post: PostEntity }) {
             <span className="text-[#E06A3B] mt-0.5"><MapPinIcon /></span>
             <div>
               <span className="block text-xs text-[#7A6A61] dark:text-[#A39891] font-semibold uppercase">Ubicación</span>
-              <span className="font-medium text-[#2D231F] dark:text-[#EFEBE8]">{post.location}</span>
+              <span className="font-medium text-[#2D231F] dark:text-[#EFEBE8]">{localPost.location}</span>
             </div>
           </div>
           <div className="flex items-start gap-2 text-sm">
@@ -242,7 +293,7 @@ export function PostCard({ post }: { post: PostEntity }) {
               <span className="block text-xs text-[#7A6A61] dark:text-[#A39891] font-semibold uppercase">
                 {isJob ? "Presupuesto" : "Tarifa"}
               </span>
-              <span className="font-medium text-[#2D231F] dark:text-[#EFEBE8]">{post.budget || post.rate}</span>
+              <span className="font-medium text-[#2D231F] dark:text-[#EFEBE8]">{localPost.budget || localPost.rate}</span>
             </div>
           </div>
         </div>
@@ -250,7 +301,7 @@ export function PostCard({ post }: { post: PostEntity }) {
 
       {/* Tags */}
       <div className="flex flex-wrap gap-2 mb-4">
-        {post.tags.map((tag: string) => (
+        {localPost.tags.map((tag: string) => (
           <span key={tag} className="text-xs font-semibold px-2.5 py-1 bg-[#F0E5D8]/50 dark:bg-[#3D332D]/50 text-[#52443C] dark:text-[#B8AEA7] rounded-md">
             {tag}
           </span>
@@ -259,17 +310,60 @@ export function PostCard({ post }: { post: PostEntity }) {
 
       {/* Action footer */}
       <div className="flex gap-4 pt-4 border-t border-[#F0E5D8] dark:border-[#3D332D]">
-        <button className="flex items-center gap-1.5 text-[#7A6A61] dark:text-[#A39891] hover:text-[#E06A3B] dark:hover:text-[#F27A4A] transition-colors text-sm font-medium">
-          <HeartIcon /> {post.likes}
+        <button 
+          onClick={handleLike}
+          className={`flex items-center gap-1.5 transition-colors text-sm font-medium ${hasLiked ? 'text-red-500 hover:text-red-600' : 'text-[#7A6A61] dark:text-[#A39891] hover:text-[#E06A3B] dark:hover:text-[#F27A4A]'}`}
+        >
+          <HeartIcon filled={hasLiked} /> {likedArray.length}
         </button>
-        <button className="flex items-center gap-1.5 text-[#7A6A61] dark:text-[#A39891] hover:text-[#E06A3B] dark:hover:text-[#F27A4A] transition-colors text-sm font-medium">
-          <MessageIcon /> {post.comments} Comentarios
+        <button 
+          onClick={() => setIsCommentsOpen(!isCommentsOpen)}
+          className={`flex items-center gap-1.5 transition-colors text-sm font-medium ${isCommentsOpen ? 'text-[#E06A3B] dark:text-[#F27A4A]' : 'text-[#7A6A61] dark:text-[#A39891] hover:text-[#E06A3B] dark:hover:text-[#F27A4A]'}`}
+        >
+          <MessageIcon /> {commentsArray.length} Comentarios
         </button>
         
         <button className="ml-auto bg-[#FCF8F4] hover:bg-[#F0E5D8] dark:bg-[#3D332D] dark:hover:bg-[#52443C] text-[#2D231F] dark:text-[#EFEBE8] px-4 py-1.5 rounded-lg text-sm font-bold border border-[#F0E5D8] dark:border-[#52443C] transition-colors">
           Contactar
         </button>
       </div>
+      {/* Comments Panel */}
+      {isCommentsOpen && (
+        <div className="mt-4 pt-4 border-t border-[#F0E5D8] dark:border-[#3D332D] animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="space-y-4 mb-4 max-h-48 overflow-y-auto no-scrollbar pr-2">
+            {commentsArray.length === 0 ? (
+              <p className="text-sm text-center text-[#7A6A61] dark:text-[#A39891] py-2">Sé el primero en comentar.</p>
+            ) : (
+              commentsArray.map((c: any, i: number) => (
+                <div key={i} className="flex gap-3">
+                  <img src={c.authorAvatar} alt={c.authorName} className="w-8 h-8 rounded-full border border-[#F0E5D8] dark:border-[#3D332D]" />
+                  <div className="bg-[#FCF8F4] dark:bg-[#1A1614] rounded-xl rounded-tl-none p-3 border border-[#F0E5D8] dark:border-[#3D332D] flex-1">
+                    <h5 className="font-bold text-xs text-[#2D231F] dark:text-[#EFEBE8]">{c.authorName}</h5>
+                    <p className="text-sm text-[#52443C] dark:text-[#B8AEA7] mt-1">{c.text}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="flex gap-2">
+            <input 
+              type="text" 
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Escribe un comentario..."
+              className="flex-1 bg-[#FCF8F4] dark:bg-[#1A1614] border border-[#F0E5D8] dark:border-[#3D332D] rounded-xl p-2.5 text-sm outline-none focus:border-[#E06A3B] transition-colors"
+              onKeyDown={(e) => e.key === 'Enter' && handleCommentSubmit()}
+            />
+            <button 
+              onClick={handleCommentSubmit}
+              disabled={!newComment.trim()}
+              className="bg-[#E06A3B] text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm disabled:opacity-50 transition-all hover:bg-[#C65B30]"
+            >
+              Enviar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
